@@ -1,0 +1,11 @@
+firmware/bin/
+ros2_bridge/build/
+ros2_bridge/install/
+ros2_bridge/log/
+ros2_bridge/**/__pycache__/
+ros2_bridge/**/*.pyc
+**/__pycache__/
+**/*.pyc
+ros2_bridge/testlogs/
+ros2_bridge/testlogs_existing/
+SESSION_NOTES_*.md
