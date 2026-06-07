@@ -14,6 +14,5 @@
 
 #define PROTOCOL_MAX_PAYLOAD_LENGTH   48U
 #define PROTOCOL_MAX_FRAME_LENGTH     64U
-#define PROTOCOL_MAX_BODY_SIZE     52U   //El valor de 52 = 3+1+48
 
 #endif

@@ -48,6 +48,7 @@ FREERTOS_SRC = \
     $(HEAP_4_SRC)
 
 LOCAL_SRC = \
+	
     main.c \
     platform/system_init.c \
     app/tasks.c \

@@ -34,6 +34,9 @@ typedef struct {
 
 void parser_init(parser_t *parser);
 void parser_reset(parser_t *parser);
+static int protocol_validate(const char *frame, size_t frame_len);
 parser_result_t parser_consume_byte(parser_t *parser, uint8_t byte, protocol_message_t *message);
+static int hex_char_to_nibble(char c);
+static parser_result_t handle_parser_error(parser_t *parser, uint8_t byte);
 
 #endif

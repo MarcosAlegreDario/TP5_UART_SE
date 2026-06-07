@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "protocol.h"
-
+#include <stdio.h>
 /*
  * Este archivo fue dejado intencionalmente incompleto para la práctica.
  *
@@ -17,7 +17,8 @@
 
 const char *protocol_type_to_text(protocol_type_t type)
 {
-    switch (type) {
+    switch (type)
+    {
     case PROTOCOL_TYPE_CMD:
         return "CMD";
     case PROTOCOL_TYPE_DAT:
@@ -37,26 +38,33 @@ const char *protocol_type_to_text(protocol_type_t type)
 
 protocol_type_t protocol_type_from_text(const char *text)
 {
-    if (text == NULL) {
+    if (text == NULL)
+    {
         return PROTOCOL_TYPE_INVALID;
     }
 
-    if (strncmp(text, "CMD", PROTOCOL_TYPE_LENGTH) == 0) {
+    if (strncmp(text, "CMD", PROTOCOL_TYPE_LENGTH) == 0)
+    {
         return PROTOCOL_TYPE_CMD;
     }
-    if (strncmp(text, "DAT", PROTOCOL_TYPE_LENGTH) == 0) {
+    if (strncmp(text, "DAT", PROTOCOL_TYPE_LENGTH) == 0)
+    {
         return PROTOCOL_TYPE_DAT;
     }
-    if (strncmp(text, "EVT", PROTOCOL_TYPE_LENGTH) == 0) {
+    if (strncmp(text, "EVT", PROTOCOL_TYPE_LENGTH) == 0)
+    {
         return PROTOCOL_TYPE_EVT;
     }
-    if (strncmp(text, "STS", PROTOCOL_TYPE_LENGTH) == 0) {
+    if (strncmp(text, "STS", PROTOCOL_TYPE_LENGTH) == 0)
+    {
         return PROTOCOL_TYPE_STS;
     }
-    if (strncmp(text, "ACK", PROTOCOL_TYPE_LENGTH) == 0) {
+    if (strncmp(text, "ACK", PROTOCOL_TYPE_LENGTH) == 0)
+    {
         return PROTOCOL_TYPE_ACK;
     }
-    if (strncmp(text, "ERR", PROTOCOL_TYPE_LENGTH) == 0) {
+    if (strncmp(text, "ERR", PROTOCOL_TYPE_LENGTH) == 0)
+    {
         return PROTOCOL_TYPE_ERR;
     }
 
@@ -67,52 +75,84 @@ bool protocol_message_set(protocol_message_t *message, protocol_type_t type, con
 {
     size_t payload_length;
 
-    if ((message == NULL) || (payload == NULL)) {
+    if ((message == NULL) || (payload == NULL))
+    {
         return false;
     }
 
     payload_length = strlen(payload);
-    if (payload_length > PROTOCOL_MAX_PAYLOAD_LENGTH) {
+    if (payload_length > PROTOCOL_MAX_PAYLOAD_LENGTH)
+    {
         return false;
     }
 
     message->type = type;
-    message->payload_length = (uint8_t) payload_length;
+    message->payload_length = (uint8_t)payload_length;
     memcpy(message->payload, payload, payload_length + 1U);
     return true;
 }
 
 uint8_t protocol_compute_checksum(const char *data, size_t length)
 {
-    (void) data;
-    (void) length;
-
-    /* TODO(alumno): implementar XOR byte a byte. */
-    return 0U;
+    uint8_t cs = 0U;
+    for (size_t i = 0U; i < length; i++)
+    {
+        cs ^= (uint8_t)data[i];
+    }
+    return cs;
 }
 
 bool protocol_encode_frame(const protocol_message_t *message, char *frame, size_t frame_size, size_t *frame_length)
 {
-    (void) message;
-    (void) frame;
-    (void) frame_size;
-    (void) frame_length;
+    if (message == NULL || frame == NULL || frame_length == NULL)
+    {
+        return false;
+    }
 
-    /*
-     * TODO(alumno):
-     * 1. construir body = "TTT:PAYLOAD"
-     * 2. calcular LL en hexadecimal
-     * 3. calcular checksum sobre "LL:TTT:PAYLOAD"
-     * 4. armar la trama final @LL:TTT:PAYLOAD:CC\n
-     */
-    return false;
+    // Convertir el enum (ej. PROTOCOL_TYPE_CMD) a texto ("CMD")
+    const char *type_str = protocol_type_to_text(message->type);
+    if (strncmp(type_str, "INV", 3) == 0)
+    {
+        return false; // Tipo inválido
+    }
+
+    // 1. construir body = "TTT:PAYLOAD"
+    char body[PROTOCOL_MAX_BODY_SIZE + 1];
+    int body_len = snprintf(body, sizeof(body), "%s:%s", type_str, message->payload);
+    if (body_len < 0 || (size_t)body_len > PROTOCOL_MAX_BODY_SIZE)
+    {
+        return false;
+    }
+
+    // 2. calcular LL en hexadecimal y armar "LL:TTT:PAYLOAD"
+    char cs_input[PROTOCOL_MAX_FRAME_LENGTH + 1];
+    int cs_bytes = snprintf(cs_input, sizeof(cs_input), "%02X:%s", (unsigned int)body_len, body);
+    if (cs_bytes < 0 || (size_t)cs_bytes >= sizeof(cs_input))
+    {
+        return false;
+    }
+
+    // 3. calcular checksum sobre "LL:TTT:PAYLOAD"
+    uint8_t cs = protocol_compute_checksum(cs_input, (size_t)cs_bytes);
+
+    // 4. armar la trama final @LL:TTT:PAYLOAD:CC\n
+    int written = snprintf(frame, frame_size, "@%s:%02X\n", cs_input, cs);
+    if (written < 0 || (size_t)written >= frame_size)
+    {
+        return false;
+    }
+
+    // Guardar la longitud final para que la UART sepa cuántos bytes transmitir
+    *frame_length = (size_t)written;
+
+    return true;
 }
 
 bool protocol_decode_body(const char *body, uint8_t body_length, protocol_message_t *message)
 {
-    (void) body;
-    (void) body_length;
-    (void) message;
+    (void)body;
+    (void)body_length;
+    (void)message;
 
     /*
      * TODO(alumno):
