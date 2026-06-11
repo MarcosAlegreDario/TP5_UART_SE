@@ -7,7 +7,6 @@
  * Funciones auxiliares privadas del parser
  */
 
-// Conversión de hexadecimal (la misma que usamos en protocol.c)
 static int hex_char_to_nibble(char c)
 {
     if (c >= '0' && c <= '9')

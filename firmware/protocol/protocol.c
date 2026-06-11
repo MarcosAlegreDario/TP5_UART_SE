@@ -3,16 +3,25 @@
 #include "protocol.h"
 #include <stdio.h>
 /*
- * Este archivo fue dejado intencionalmente incompleto para la práctica.
- *
- * Objetivo:
- * - construir tramas del tipo @LL:TTT:PAYLOAD:CC\n
- * - calcular checksum XOR de LL:TTT:PAYLOAD
- * - decodificar el body TTT:PAYLOAD
+ * En este archivo se lograron los siguientes objetivos:
+
+ * - Construir tramas del tipo @LL:TTT:PAYLOAD:CC\n
+ * - Calcular checksum XOR de LL:TTT:PAYLOAD
+ * - Decodificar el body TTT:PAYLOAD
  *
  * Documentación útil:
  * - docs/PROTOCOL.md
  * - docs/FRAME_GENERATION_AND_PARSING.md
+ 
+ Las funciones que se crearon y modificaron fueron:
+
+- protocol_compute_checksum
+- protocol_encode_frame
+- protocol_decode_body
+
+
+
+
  */
 
 const char *protocol_type_to_text(protocol_type_t type)
@@ -116,7 +125,7 @@ bool protocol_encode_frame(const protocol_message_t *message, char *frame, size_
         return false; // Tipo inválido
     }
 
-    // 1. construir body = "TTT:PAYLOAD"
+    // Crear el body = "TTT:PAYLOAD"
     char body[PROTOCOL_MAX_BODY_SIZE + 1];
     int body_len = snprintf(body, sizeof(body), "%s:%s", type_str, message->payload);
     if (body_len < 0 || (size_t)body_len > PROTOCOL_MAX_BODY_SIZE)
@@ -124,7 +133,7 @@ bool protocol_encode_frame(const protocol_message_t *message, char *frame, size_
         return false;
     }
 
-    // 2. calcular LL en hexadecimal y armar "LL:TTT:PAYLOAD"
+    // Calcular LL en hexadecimal y armar "LL:TTT:PAYLOAD"
     char cs_input[PROTOCOL_MAX_FRAME_LENGTH + 1];
     int cs_bytes = snprintf(cs_input, sizeof(cs_input), "%02X:%s", (unsigned int)body_len, body);
     if (cs_bytes < 0 || (size_t)cs_bytes >= sizeof(cs_input))
@@ -132,10 +141,10 @@ bool protocol_encode_frame(const protocol_message_t *message, char *frame, size_
         return false;
     }
 
-    // 3. calcular checksum sobre "LL:TTT:PAYLOAD"
+    // Calcular checksum sobre "LL:TTT:PAYLOAD"
     uint8_t cs = protocol_compute_checksum(cs_input, (size_t)cs_bytes);
 
-    // 4. armar la trama final @LL:TTT:PAYLOAD:CC\n
+    // Armar la trama final @LL:TTT:PAYLOAD:CC\n
     int written = snprintf(frame, frame_size, "@%s:%02X\n", cs_input, cs);
     if (written < 0 || (size_t)written >= frame_size)
     {
@@ -150,15 +159,29 @@ bool protocol_encode_frame(const protocol_message_t *message, char *frame, size_
 
 bool protocol_decode_body(const char *body, uint8_t body_length, protocol_message_t *message)
 {
-    (void)body;
-    (void)body_length;
-    (void)message;
+    if (body == NULL || message == NULL || body_length < 4) {
+        return false;
+    }
 
-    /*
-     * TODO(alumno):
-     * - validar formato TTT:PAYLOAD
-     * - convertir TTT a protocol_type_t
-     * - copiar payload al struct message
-     */
-    return false;
+    // Validar formato TTT:PAYLOAD (tiene que tener los dos puntos en la posición 3)
+    if (body[3] != ':') {
+        return false;
+    }
+
+    // Extraer los primeros 3 caracteres (TTT)
+    char type_str[4];
+    strncpy(type_str, body, 3);
+    type_str[3] = '\0'; // Asegurar que sea un string válido en C
+
+    // Convertir TTT a protocol_type_t usando la función que ya viene en el archivo
+    protocol_type_t type = protocol_type_from_text(type_str);
+    if (type == PROTOCOL_TYPE_INVALID) {
+        return false;
+    }
+
+    // Copiar payload al struct message (lo que está después de los ':')
+    const char *payload_str = &body[4];
+    
+    // Usamos la función del proyecto para poblar la estructura de forma segura
+    return protocol_message_set(message, type, payload_str);
 }
