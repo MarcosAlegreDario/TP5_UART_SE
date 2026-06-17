@@ -1,4 +1,4 @@
-//Hola
+// Hola
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -6,7 +6,12 @@
 #include "firmware/config/app_config.h"
 #include "firmware/config/FreeRTOSConfig.h"
 
+#define PROTOCOL_MAX_BODY_SIZE 52   //Solo para este testeo
+
+
 // Prototipos de funciones
+
+
 
 static int hex_char_to_nibble(char c);
 uint8_t protocol_checksum(const char *input, size_t len);
@@ -17,7 +22,7 @@ int protocol_validate(const char *frame, size_t frame_len);
 
 int main()
 {
-    char buf[64];
+    char buf[64]; // Como tiene 64 elementos su sizeof da 64
 
     printf("\n--- TEST ETAPA 1: ENCODE & CHECKSUM ---\n\n");
 
@@ -37,11 +42,28 @@ int main()
     printf("Esperado: @14:ERR:code=unknown_cmd:2D\n");
     printf("Obtenido: %s\n", buf);
 
+    printf("Primera parte del testeo cumplida, pasamos a la siguiente\n");
+    printf("Implementamos el protocol_validate()\n");
+
     printf("Le pasamos 08:CMD:ping:52 y vemos si devuelve 1 o 0\n");
-    int validacion = protocol_validate("08:CMD:ping:52", 14); 
+    int validacion = protocol_validate("08:CMD:ping:52", 14);
     printf("Resultado: %d\n", validacion);
 
-    return 0;
+    printf("Le pasamos 08:CMD:ping:53 y vemos si devuelve 1 o 0\n");
+    validacion = protocol_validate("08:CMD:ping:53", 16);
+    printf("Resultado: %d\n", validacion);
+
+    printf("Le pasamos 0A:ACK:cmd=ok:6B y vemos si devuelve 1 o 0\n");
+    validacion = protocol_validate("0A:ACK:cmd=ok:6B", 16);
+    printf("Resultado: %d\n", validacion);
+
+    
+    printf("Le pasamos 14:ERR:code=unknown_cmd:2D y vemos si devuelve 1 o 0\n");
+    validacion = protocol_validate("14:ERR:code=unknown_cmd:2D", 26);
+    printf("Resultado: %d\n", validacion);
+    
+
+               return 0;
 }
 
 // Conversión Hexadecimal
@@ -107,9 +129,8 @@ int protocol_encode(const char *type, const char *payload, char *buf, size_t buf
 }
 
 // Validación de trama recibida
-int protocol_validate(const char *frame, size_t frame_len)
+static int protocol_validate(const char *frame, size_t frame_len)
 {
-    // Buscamos el ÚLTIMO ':' que separa el cuerpo del checksum
     const char *last_colon = NULL;
     for (size_t i = 0; i < frame_len; i++)
     {
@@ -117,7 +138,6 @@ int protocol_validate(const char *frame, size_t frame_len)
             last_colon = &frame[i];
     }
 
-    // Si no hay dos puntos, o el checksum no tiene exactamente 2 caracteres, es inválido
     if (last_colon == NULL)
         return -1;
     if (last_colon + 3 != frame + frame_len)
@@ -125,7 +145,6 @@ int protocol_validate(const char *frame, size_t frame_len)
 
     const char *cs_received_str = last_colon + 1;
 
-    // Convertimos el checksum de texto (ej: "52") a número real (0x52)
     int hi = hex_char_to_nibble(cs_received_str[0]);
     int lo = hex_char_to_nibble(cs_received_str[1]);
     if (hi < 0 || lo < 0)
@@ -133,11 +152,8 @@ int protocol_validate(const char *frame, size_t frame_len)
 
     uint8_t cs_received = (uint8_t)((hi << 4) | lo);
 
-    // Calculamos qué checksum DEBERÍA tener todo lo que está antes de los dos puntos
     size_t cs_input_len = (size_t)(last_colon - frame);
-    uint8_t cs_calculated = protocol_checksum(frame, cs_input_len);
-
-    // Si coinciden, la trama es válida (0). Si no, está corrupta (1).
-
+    // Usamos la función de checksum que declaramos en protocol.h
+    uint8_t cs_calculated = protocol_compute_checksum(frame, cs_input_len);
     return (cs_calculated == cs_received) ? 0 : 1;
 }

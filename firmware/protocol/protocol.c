@@ -12,7 +12,7 @@
  * Documentación útil:
  * - docs/PROTOCOL.md
  * - docs/FRAME_GENERATION_AND_PARSING.md
- 
+
  Las funciones que se crearon y modificaron fueron:
 
 - protocol_compute_checksum
@@ -159,12 +159,14 @@ bool protocol_encode_frame(const protocol_message_t *message, char *frame, size_
 
 bool protocol_decode_body(const char *body, uint8_t body_length, protocol_message_t *message)
 {
-    if (body == NULL || message == NULL || body_length < 4) {
+    if (body == NULL || message == NULL || body_length < 4)
+    {
         return false;
     }
 
     // Validar formato TTT:PAYLOAD (tiene que tener los dos puntos en la posición 3)
-    if (body[3] != ':') {
+    if (body[3] != ':')
+    {
         return false;
     }
 
@@ -175,13 +177,14 @@ bool protocol_decode_body(const char *body, uint8_t body_length, protocol_messag
 
     // Convertir TTT a protocol_type_t usando la función que ya viene en el archivo
     protocol_type_t type = protocol_type_from_text(type_str);
-    if (type == PROTOCOL_TYPE_INVALID) {
+    if (type == PROTOCOL_TYPE_INVALID)
+    {
         return false;
     }
 
     // Copiar payload al struct message (lo que está después de los ':')
     const char *payload_str = &body[4];
-    
+
     // Usamos la función del proyecto para poblar la estructura de forma segura
     return protocol_message_set(message, type, payload_str);
 }
